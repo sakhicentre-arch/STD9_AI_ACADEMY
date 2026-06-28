@@ -1,0 +1,72 @@
+# config.yaml.example — EDF-L1 Configuration Template
+# Copy to config.yaml and edit for your environment.
+
+version: "1.0"
+
+# General settings
+general:
+  content_root: "./CONTENT"              # Path to CONTENT directory
+  edf_metadata_dir: ".edf"               # Metadata subdirectory within CONTENT
+  dry_run: false                          # Log actions without downloading
+  force_overwrite: false                  # Overwrite existing files on conflict
+
+# Download settings
+download:
+  max_retries: 3
+  backoff_base_seconds: 1
+  timeout_seconds: 120
+  chunk_size_bytes: 8192
+  user_agent: "STD9-AI-Academy/EDF-L1 (educational download)"
+  temp_dir: ".edf/tmp"                    # Temp directory for streaming downloads
+  delay_seconds: 1.0                     # Delay between downloads (rate-limit courtesy)
+
+# Validation settings
+validation:
+  require_pdf_header: true
+  min_size_bytes: 10240                  # 10 KB minimum
+  checksum_algorithm: "sha256"
+
+# NCERT adapter
+ncert:
+  enabled: true
+  master_list_url: "https://ncert.nic.in/textbook/pdf/NCF2023.pdf"
+  master_list_local_cache: ".edf/cache/ncert_master.pdf"
+  textbooks:
+    - code: "IEMH1"                      # NCERT textbook code
+      std: "09"
+      subject: "maths"
+      medium: "english"
+      language: "en"
+      # url: ""                           # Override auto-resolved URL
+      # expected_sha256: ""               # Optional pre-known checksum
+    - code: "IEMH1BD"
+      std: "09"
+      subject: "maths_bilingual"
+      medium: "english"
+      language: "en"
+
+# GSEB adapter
+gseb:
+  enabled: true
+  textbooks:
+    - std: "09"
+      subject: "maths"
+      medium: "gujarati"
+      language: "gu"
+      url: "https://example.com/gseb/std09_gujarati_maths.pdf"
+      filename: "std09_gujarati_maths.pdf"
+      # expected_sha256: ""               # Optional
+      # expected_size_bytes: 15000000      # Optional
+    - std: "09"
+      subject: "science"
+      medium: "gujarati"
+      language: "gu"
+      url: "https://example.com/gseb/std09_gujarati_science.pdf"
+      filename: "std09_gujarati_science.pdf"
+
+# Logging
+logging:
+  level: "INFO"                            # DEBUG | INFO | WARNING | ERROR
+  jsonl: true                              # Enable JSON lines output
+  human_readable: true                     # Enable formatted log output
+  log_dir: ".edf/logs"

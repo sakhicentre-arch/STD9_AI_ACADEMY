@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "comet-bridge": {
+      "command": "npx",
+      "args": ["-y", "comet-mcp"]
+    }
+  }
+}

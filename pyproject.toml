@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "edf-l1"
+version = "0.1.0"
+description = "Education Download Framework — Level 1. Automated PDF acquisition for GSEB and NCERT textbooks."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = [
+    "PyYAML>=6.0,<7.0",
+    "requests>=2.31.0,<3.0",
+    "rich>=13.0.0,<14.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0,<9.0",
+    "pytest-cov>=4.1.0,<6.0",
+    "pytest-mock>=3.11.0,<4.0",
+    "requests-mock>=1.11.0,<2.0",
+]
+
+[project.scripts]
+edf = "main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--strict-markers -v"
+
+[tool.coverage.run]
+source = ["src/edf"]
+omit = ["tests/*", "scripts/*"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
