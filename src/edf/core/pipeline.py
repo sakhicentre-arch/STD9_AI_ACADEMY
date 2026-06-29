@@ -8,7 +8,9 @@ load config → pre-flight verify → dedup → download → validate → manife
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
+
+from src.edf.models.data import PreflightIssue, RunSummary
 
 if TYPE_CHECKING:
     from src.edf.core.config import ConfigLoader
@@ -72,7 +74,7 @@ class PipelineOrchestrator:
 
         Pipeline phases:
             0. Inventory — scan existing CONTENT files (first run only)
-            1. Pre-flight — adapter verification (NCERT code check)
+            1. Pre-flight — adapter verification (GSEB URL check)
             2. Collect — gather download descriptors from adapters
             3. Dedup — skip files already present
             4. Download — download and validate each file
@@ -93,6 +95,28 @@ class PipelineOrchestrator:
 
         logger.info("Pipeline started")
 
+        run_id = self._logger.run_id if self._logger else ""
+
+        # --- Initialize components ---
+        from src.edf.storage.manager import StorageManager
+        from src.edf.manifests.manager import ManifestManager
+        from src.edf.adapters.gseb import GSEBAdapter
+        from src.edf.core.downloader import DownloadPipeline
+
+        config = self._config.config
+        storage = StorageManager(
+            content_root=self._config.content_root,
+            edf_dir=self._config.edf_metadata_dir,
+        )
+        manifest = ManifestManager(storage_manager=storage)
+        manifest.load_existing()
+        adapter = GSEBAdapter(config=config)
+        download_pipeline = DownloadPipeline(
+            storage_manager=storage,
+            manifest_manager=manifest,
+            config=config,
+        )
+
         result = {
             "exit_code": 0,
             "attempted": 0,
@@ -102,16 +126,155 @@ class PipelineOrchestrator:
             "phases": {},
         }
 
-        # TODO: Phase 0 — Inventory (first run scan)
-        # TODO: Phase 1 — Pre-flight verification
-        # TODO: Phase 2 — Collect descriptors
-        # TODO: Phase 3 — Duplicate detection
-        # TODO: Phase 4 — Download and validate
-        # TODO: Phase 5 — Manifest generation
-        # TODO: Phase 6 — Run summary
+        # --- Phase 0: Inventory ---
+        try:
+            discovered = manifest.discover_existing_files()
+            logger.info(
+                "Phase 0 (Inventory): discovered %d existing file(s)",
+                len(discovered),
+            )
+            result["phases"]["inventory"] = {
+                "status": "ok",
+                "discovered": len(discovered),
+            }
+        except Exception as exc:
+            logger.error("Phase 0 (Inventory) failed: %s", exc)
+            result["phases"]["inventory"] = {
+                "status": "error",
+                "error": str(exc),
+            }
 
-        logger.info("Pipeline completed (skeleton — no phases implemented)")
+        # --- Phase 1: Pre-flight ---
+        try:
+            preflight_issues = adapter.pre_flight()
+            has_errors = any(
+                i.severity.value == "ERROR" for i in preflight_issues
+            )
+            result["phases"]["preflight"] = {
+                "status": "error" if has_errors else "ok",
+                "issues": len(preflight_issues),
+                "errors": sum(
+                    1 for i in preflight_issues if i.severity.value == "ERROR"
+                ),
+                "warnings": sum(
+                    1 for i in preflight_issues
+                    if i.severity.value in ("WARNING", "INFO")
+                ),
+            }
+            if has_errors:
+                logger.error(
+                    "Phase 1 (Pre-flight): %d error(s) — aborting pipeline",
+                    result["phases"]["preflight"]["errors"],
+                )
+                result["exit_code"] = 2
+                self._cleanup(manifest, run_id)
+                return result
+            logger.info(
+                "Phase 1 (Pre-flight): %d issue(s) — proceeding",
+                len(preflight_issues),
+            )
+        except Exception as exc:
+            logger.error("Phase 1 (Pre-flight) failed: %s", exc)
+            result["phases"]["preflight"] = {
+                "status": "error",
+                "error": str(exc),
+            }
+            result["exit_code"] = 2
+            self._cleanup(manifest, run_id)
+            return result
+
+        # --- Phase 2: Collect descriptors ---
+        try:
+            descriptors = adapter.get_descriptors()
+            logger.info(
+                "Phase 2 (Collect): %d descriptor(s)",
+                len(descriptors),
+            )
+            result["phases"]["collect"] = {
+                "status": "ok",
+                "descriptors": len(descriptors),
+            }
+        except Exception as exc:
+            logger.error("Phase 2 (Collect) failed: %s", exc)
+            result["phases"]["collect"] = {"status": "error", "error": str(exc)}
+            result["exit_code"] = 2
+            self._cleanup(manifest, run_id)
+            return result
+
+        # --- Phase 3+4+5: Download, Validate, Store, Manifest ---
+        if not descriptors:
+            logger.info("No descriptors — skipping download phases")
+            result["phases"]["download"] = {
+                "status": "ok",
+                "descriptors": 0,
+            }
+        else:
+            try:
+                force = self._config.is_force_overwrite
+                summary = download_pipeline.run(
+                    descriptors=descriptors,
+                    run_id=run_id,
+                    force=force,
+                )
+                result["attempted"] = summary.attempted
+                result["succeeded"] = summary.succeeded
+                result["skipped"] = summary.skipped
+                result["failed"] = summary.failed
+                result["exit_code"] = summary.exit_code
+                result["phases"]["download"] = {
+                    "status": "ok",
+                    "attempted": summary.attempted,
+                    "succeeded": summary.succeeded,
+                    "skipped": summary.skipped,
+                    "failed": summary.failed,
+                    "duration": summary.duration_seconds,
+                }
+            except Exception as exc:
+                logger.error("Phase 3-5 (Download pipeline) failed: %s", exc)
+                result["phases"]["download"] = {
+                    "status": "error",
+                    "error": str(exc),
+                }
+                result["exit_code"] = 2
+
+        # --- Phase 6: Persist manifest ---
+        try:
+            manifest.save(run_id=run_id)
+            result["phases"]["manifest"] = {
+                "status": "ok",
+                "entries": manifest.entry_count,
+            }
+        except Exception as exc:
+            logger.error("Phase 6 (Manifest save) failed: %s", exc)
+            result["phases"]["manifest"] = {
+                "status": "error",
+                "error": str(exc),
+            }
+
+        # --- Phase 7: Summary ---
+        result["phases"]["summary"] = {
+            "exit_code": result["exit_code"],
+            "total_attempted": result["attempted"],
+            "total_succeeded": result["succeeded"],
+            "total_skipped": result["skipped"],
+            "total_failed": result["failed"],
+        }
+
+        if result["exit_code"] == 0:
+            logger.info("Pipeline completed successfully")
+        elif result["exit_code"] == 1:
+            logger.warning("Pipeline completed with partial failures")
+        else:
+            logger.error("Pipeline failed")
+
         return result
+
+    def _cleanup(self, manifest, run_id: str) -> None:
+        """Best-effort cleanup on pipeline abort."""
+        try:
+            manifest.save(run_id=run_id)
+        except Exception:
+            pass
 
     def shutdown(self) -> None:
         """
