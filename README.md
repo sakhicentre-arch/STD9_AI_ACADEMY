@@ -38,15 +38,16 @@ storage, and manifest registration.
    ┌─────────────────────┐         ┌─────────────────────────┐
    │  adapters/          │         │  models/                │
    │   ├─ base.py        │←contract│   DownloadDescriptor    │
-   │   └─ gseb.py (✅)   │         │   RunSummary            │
-   │  (ncert.py — Ph6)   │         │   PreflightIssue        │
+   │   ├─ gseb.py (✅)   │         │   RunSummary            │
+   │   ├─ ncert.py (✅)   │         │   PreflightIssue        │
+   │   └─ registry.py (✅) │         │   ManifestEntry          │
    └──────────┬──────────┘         └─────────────────────────┘
               │ descriptors
               ▼
    ┌──────────────────────────────────────────────────────────┐
    │  core/                                                   │
-   │   ├─ pipeline.py        — run coordination               │
-   │   └─ downloader.py      — DownloadPipeline (HTTP fetch)  │
+   │   ├─ pipeline.py        — board-agnostic coordination    │
+   │   └─ downloader.py      — DownloadPipeline (per-board)   │
    └──────────┬──────────────────────────────────┬────────────┘
               ▼                                   ▼
    ┌─────────────────────┐            ┌─────────────────────────┐

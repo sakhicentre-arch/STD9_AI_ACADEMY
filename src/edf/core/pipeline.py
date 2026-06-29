@@ -100,7 +100,7 @@ class PipelineOrchestrator:
         # --- Initialize components ---
         from src.edf.storage.manager import StorageManager
         from src.edf.manifests.manager import ManifestManager
-        from src.edf.adapters.gseb import GSEBAdapter
+        from src.edf.adapters.registry import default_registry
         from src.edf.core.downloader import DownloadPipeline
 
         config = self._config.config
@@ -110,7 +110,11 @@ class PipelineOrchestrator:
         )
         manifest = ManifestManager(storage_manager=storage)
         manifest.load_existing()
-        adapter = GSEBAdapter(config=config)
+
+        # Board discovery is registry-driven: the orchestrator is board-agnostic
+        # and no longer hardcodes any concrete adapter. Each enabled board's
+        # adapter is obtained from the registry and instantiated lazily.
+        registry = default_registry()
         download_pipeline = DownloadPipeline(
             storage_manager=storage,
             manifest_manager=manifest,
@@ -144,9 +148,17 @@ class PipelineOrchestrator:
                 "error": str(exc),
             }
 
-        # --- Phase 1: Pre-flight ---
+        # --- Resolve enabled adapters via the registry ---
+        enabled_boards = registry.enabled_boards(config, registry.list_adapters())
+        adapters = [
+            registry.create(board, config=config) for board in enabled_boards
+        ]
+
+        # --- Phase 1: Pre-flight (across all enabled adapters) ---
         try:
-            preflight_issues = adapter.pre_flight()
+            preflight_issues = []
+            for adapter in adapters:
+                preflight_issues.extend(adapter.pre_flight())
             has_errors = any(
                 i.severity.value == "ERROR" for i in preflight_issues
             )
@@ -183,9 +195,11 @@ class PipelineOrchestrator:
             self._cleanup(manifest, run_id)
             return result
 
-        # --- Phase 2: Collect descriptors ---
+        # --- Phase 2: Collect descriptors (merged across all adapters) ---
         try:
-            descriptors = adapter.get_descriptors()
+            descriptors = []
+            for adapter in adapters:
+                descriptors.extend(adapter.get_descriptors())
             logger.info(
                 "Phase 2 (Collect): %d descriptor(s)",
                 len(descriptors),
