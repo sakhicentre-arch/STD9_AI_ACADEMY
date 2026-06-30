@@ -156,9 +156,9 @@ safe to wire into CI / pre-merge gates.
 |------|-------|-------|
 | `tests/test_gseb_adapter_verification.py` | GSEBAdapter behaviour (12 sections) | 69 |
 | `tests/test_integration_staged.py` | 9-stage end-to-end (stages 3.1–3.9) | 20 |
-| `tests/test_storage_manager_verification.py` | Atomicity, checksums, paths | 43 |
-| `tests/test_manifest_manager_verification.py` | Manifest registration/metadata | 42 |
-| `tests/test_adapter_registry.py` | Registry behaviour, enabled-boards, backward compat | 48 |
+| `tests/test_storage_manager_verification.py` | Atomicity, checksums, paths | 85 |
+| `tests/test_manifest_manager_verification.py` | Manifest registration/metadata | — |
+| `tests/test_adapter_registry.py` | Registry behaviour, enabled-boards, backward compat | 39 |
 | `tests/test_multiboard_aggregation.py` | Per-board DownloadPipeline summary | 7 |
 | `tests/test_multiboard_integration.py` | Full multi-board orchestrator end-to-end | 1 |
 | **Total** | | **230 (all passing)** |
@@ -228,7 +228,6 @@ python main.py --verify-only    # Re-validate existing files
 ---
 
 ## Roadmap
-
 ### ✅ Done (Phases 1–6)
 
 - Skeleton, models, structured logging, CLI bootstrap.
