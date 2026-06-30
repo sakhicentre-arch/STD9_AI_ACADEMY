@@ -115,12 +115,23 @@ class DownloadPipeline:
             result = self._process_descriptor(descriptor, force=force)
             summary.attempted += 1
 
-            if result["status"] == "skipped":
+            status_key = result["status"]
+            if status_key == "skipped":
                 summary.skipped += 1
-            elif result["status"] == "succeeded":
+            elif status_key == "succeeded":
                 summary.succeeded += 1
             else:
                 summary.failed += 1
+
+            # Per-board breakdown: aggregate counts per descriptor.board so each
+            # board (GSEB, NCERT, ...) gets accurate numbers. The bucket is
+            # created on first sight of a board.
+            bucket = summary.board_summaries.setdefault(
+                descriptor.board,
+                {"attempted": 0, "succeeded": 0, "skipped": 0, "failed": 0},
+            )
+            bucket["attempted"] += 1
+            bucket[status_key] += 1
 
         elapsed = time.monotonic() - t0
         summary.end_time = datetime.now().isoformat()
@@ -128,15 +139,6 @@ class DownloadPipeline:
         summary.exit_code = 2 if summary.failed == summary.attempted else (
             1 if summary.failed > 0 else 0
         )
-
-        # Per-board breakdown
-        board = "GSEB"  # Could be extended for multi-board
-        summary.board_summaries[board] = {
-            "attempted": summary.attempted,
-            "succeeded": summary.succeeded,
-            "skipped": summary.skipped,
-            "failed": summary.failed,
-        }
 
         logger.info(
             "Download pipeline complete: %d attempted, %d succeeded, "

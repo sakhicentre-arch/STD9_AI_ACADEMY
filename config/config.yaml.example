@@ -26,18 +26,34 @@ validation:
   min_size_bytes: 10240                  # 10 KB minimum
   checksum_algorithm: "sha256"
 
+# Board enable/disable flags (optional — defaults to all enabled when absent)
+boards:
+  gseb:
+    enabled: true
+  ncert:
+    enabled: true
+  # cbse:
+  #   enabled: false
+
 # NCERT adapter
 ncert:
   enabled: true
   master_list_url: "https://ncert.nic.in/textbook/pdf/NCF2023.pdf"
   master_list_local_cache: ".edf/cache/ncert_master.pdf"
+  # URL derivation template — {code}, {std}, {subject}, {medium}, {language}
+  url_template: "https://ncert.nic.in/textbook/pdf/{code}.pdf"
+  # Filename derivation template — same placeholders
+  filename_template: "{std}_{medium}_{subject}_{code}.pdf"
+  academic_year: "2025-26"
   textbooks:
-    - code: "IEMH1"                      # NCERT textbook code
+    - code: "IEMH1"                      # NCERT textbook code (required)
       std: "09"
       subject: "maths"
       medium: "english"
       language: "en"
+      part: "complete"                    # chapter | complete (optional)
       # url: ""                           # Override auto-resolved URL
+      # filename: ""                      # Override auto-derived filename
       # expected_sha256: ""               # Optional pre-known checksum
     - code: "IEMH1BD"
       std: "09"
