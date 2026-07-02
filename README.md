@@ -2,10 +2,9 @@
 
 Automated PDF acquisition and management for educational textbooks (GSEB, NCERT).
 
-> **Status:** Phase 6 complete — ✅ **Production ready** for multi-board sources
-> (GSEB + NCERT). Full suite: **230 tests passing**. See
-> [`VERIFICATION_REPORT_PHASE5.md`](./VERIFICATION_REPORT_PHASE5.md) and
-> [`PHASE5_BASELINE.md`](./PHASE5_BASELINE.md).
+> **Status:** Phase 7 complete — ✅ **Production ready** with CLI, ConfigLoader,
+> and integration test suite. Full suite: **309 tests passing** across 10 modules.
+> See [`docs/releases/RELEASE_v0.7.0.md`](./docs/releases/RELEASE_v0.7.0.md).
 
 ---
 
@@ -99,7 +98,7 @@ storage, and manifest registration.
 
 ## Installation
 
-Requirements: **Python 3.12+**.
+Requirements: **Python 3.10+**.
 
 ```bash
 # 1. Clone
@@ -184,11 +183,20 @@ Copy `config/config.yaml.example` to `config.yaml` and edit:
 
 ## CLI Usage
 
+After installation the `edf` entry point is available. Both invocations work:
+
 ```bash
-python main.py                  # Run full pipeline
-python main.py --dry-run        # Simulate without downloading
-python main.py --board GSEB     # Run for a single board
-python main.py --verify-only    # Re-validate existing files
+edf                              # Run full pipeline (installed entry point)
+edf --dry-run                    # Simulate without downloading
+edf --board GSEB                 # Run for a single board
+edf --verify-only                # Re-validate existing files
+edf --config path/to/config.yaml # Custom config path
+```
+
+```bash
+# Or invoke directly without installing:
+python main.py                  # equivalent to: edf
+python main.py --dry-run        # equivalent to: edf --dry-run
 ```
 
 ---
@@ -202,7 +210,8 @@ python main.py --verify-only    # Re-validate existing files
 | 3 | ✅ Complete | DownloadPipeline, validation, HTTP fetch |
 | 4 | ✅ Complete | StorageManager, ManifestManager, checksum registry |
 | 5 | ✅ Complete | Hardening, documentation, full verification (174 tests) |
-| 6 | ✅ **Complete** | NCERT adapter, adapter registry, multi-board orchestration (230 tests) |
+| 6 | ✅ Complete | NCERT adapter, adapter registry, multi-board orchestration (230 tests) |
+| 7 | ✅ **Complete** | ConfigLoader, production CLI, integration test suite (309 tests) |
 
 **Phase 5 deliverables**
 
