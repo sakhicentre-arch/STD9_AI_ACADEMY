@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "edf-l1"
-version = "0.1.0"
+version = "0.7.0"
 description = "Education Download Framework — Level 1. Automated PDF acquisition for GSEB and NCERT textbooks."
 readme = "README.md"
 requires-python = ">=3.10"
