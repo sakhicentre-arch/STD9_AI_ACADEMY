@@ -93,6 +93,7 @@ class TestMultiboardOrchestratorIntegration:
             content_root=str(tmp_path / "CONTENT"),
             edf_metadata_dir=".edf",
             is_force_overwrite=False,
+            is_dry_run=False,
         )
         logger_instance = SimpleNamespace(run_id="it_e2e_01")
 
